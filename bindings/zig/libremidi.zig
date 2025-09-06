@@ -229,7 +229,7 @@ pub const midi = struct {
             switch (libremidi_midi_in_is_connected(self)) {
                 0 => return false,
                 1 => return true,
-                -@intFromEnum(E.INVAL) => return error.InvalidArgument,
+                -@as(c_int, @intFromEnum(E.INVAL)) => return error.InvalidArgument,
                 else => unreachable,
             }
         }
@@ -237,7 +237,7 @@ pub const midi = struct {
         extern fn libremidi_midi_in_absolute_timestamp(self: *In) Timestamp;
         pub fn getAbsoluteTimestamp(self: *In) !Timestamp {
             switch (libremidi_midi_in_absolute_timestamp(self)) {
-                -@intFromEnum(E.INVAL) => return error.InvalidArgument,
+                -@as(c_int, @intFromEnum(E.INVAL)) => return error.InvalidArgument,
                 else => |ts| return ts,
             }
         }
@@ -308,7 +308,7 @@ pub const midi = struct {
             switch (libremidi_midi_out_is_connected(self)) {
                 0 => return false,
                 1 => return true,
-                -@intFromEnum(E.INVAL) => return error.InvalidArgument,
+                -@as(c_int, @intFromEnum(E.INVAL)) => return error.InvalidArgument,
                 else => unreachable,
             }
         }
