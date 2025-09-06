@@ -119,7 +119,7 @@ pub const Observer = opaque {
     }
 
     extern fn libremidi_midi_observer_free(self: *Observer) c_int;
-    pub fn free(self: *Observer) void {
+    pub fn deinit(self: *Observer) void {
         switch (libremidi_midi_observer_free(self)) {
             0 => return,
             else => unreachable,
@@ -243,7 +243,7 @@ pub const midi = struct {
         }
 
         extern fn libremidi_midi_in_free(self: *In) c_int;
-        pub fn free(self: *In) void {
+        pub fn deinit(self: *In) void {
             switch (libremidi_midi_in_free(self)) {
                 0 => return,
                 else => unreachable,
@@ -265,7 +265,7 @@ pub const midi = struct {
             }
 
             extern fn libremidi_midi_in_port_free(self: *Port) c_int;
-            pub fn free(self: *Port) void {
+            pub fn deinit(self: *Port) void {
                 switch (libremidi_midi_in_port_free(self)) {
                     0 => return,
                     else => unreachable,
@@ -354,7 +354,7 @@ pub const midi = struct {
         }
 
         extern fn libremidi_midi_out_free(self: *Out) c_int;
-        pub fn free(self: *Out) void {
+        pub fn deinit(self: *Out) void {
             switch (libremidi_midi_out_free(self)) {
                 0 => return,
                 else => unreachable,
@@ -375,7 +375,7 @@ pub const midi = struct {
             }
 
             extern fn libremidi_midi_out_port_free(self: *Port) c_int;
-            pub fn free(self: *Port) void {
+            pub fn deinit(self: *Port) void {
                 switch (libremidi_midi_out_port_free(self)) {
                     0 => return,
                     else => unreachable,

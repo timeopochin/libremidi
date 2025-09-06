@@ -44,7 +44,7 @@ pub fn main() !void {
         .conf_type = .input,
         .api = .alsa_seq,
     });
-    defer midi_in.free();
+    defer midi_in.deinit();
 
     const midi_out: *lm.midi.Out = try .init(&.{
         .version = .midi1,
@@ -54,7 +54,7 @@ pub fn main() !void {
         .conf_type = .output,
         .api = .alsa_seq,
     });
-    defer midi_out.free();
+    defer midi_out.deinit();
 
 
     for (0..99) |_| std.time.sleep(1e9); // sleep 1s, 100 times
@@ -62,10 +62,10 @@ pub fn main() !void {
 
 fn free_observer(observer: *lm.Observer, e: *EnumeratedPorts) void {
 
-    for (e.in_ports) |maybe_port| if (maybe_port) |port| port.free();
-    for (e.out_ports) |maybe_port| if (maybe_port) |port| port.free();
+    for (e.in_ports) |maybe_port| if (maybe_port) |port| port.deinit();
+    for (e.out_ports) |maybe_port| if (maybe_port) |port| port.deinit();
 
-    observer.free();
+    observer.deinit();
 }
 
 export fn on_input_port_found(ctx: ?*anyopaque, port: *lm.midi.In.Port) callconv(.C) void {
