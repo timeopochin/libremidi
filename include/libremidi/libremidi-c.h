@@ -1,4 +1,5 @@
 #pragma once
+
 #include <libremidi/api-c.h>
 
 #include <stdbool.h>
@@ -31,6 +32,66 @@ typedef struct libremidi_midi_out_port libremidi_midi_out_port;
 typedef struct libremidi_midi_in_handle libremidi_midi_in_handle;
 typedef struct libremidi_midi_out_handle libremidi_midi_out_handle;
 typedef struct libremidi_midi_observer_handle libremidi_midi_observer_handle;
+
+typedef union libremidi_midi_port
+{
+  libremidi_midi_in_port* in;
+  libremidi_midi_out_port* out;
+} libremidi_midi_port;
+
+typedef int64_t libremidi_client_handle;
+typedef int64_t libremidi_port_handle;
+
+typedef struct libremidi_uuid
+{
+  uint8_t bytes[16];
+} libremidi_uuid;
+
+enum libremidi_identifier_type : uint8_t
+{
+  LIBREMIDI_ID_NONE = 0,
+  LIBREMIDI_ID_UUID,
+  LIBREMIDI_ID_STRING,
+  LIBREMIDI_ID_UINT64
+};
+
+typedef struct libremidi_identifier
+{
+  enum libremidi_identifier_type value_type;
+  union
+  {
+    libremidi_uuid uuid;
+    const char* string;
+    uint64_t u64;
+  } value;
+} libremidi_identifier;
+
+enum libremidi_port_type : uint8_t
+{
+  PORT_UNKNOWN = 0,
+  PORT_SOFTWARE = (1 << 1),
+  PORT_LOOPBACK = (1 << 2),
+  PORT_HARDWARE = (1 << 3),
+  PORT_USB = (1 << 4),
+  PORT_BLUETOOTH = (1 << 5),
+  PORT_PCI = (1 << 6),
+  PORT_NETWORK = (1 << 7)
+};
+
+typedef struct libremidi_port_information
+{
+  libremidi_client_handle client_handle;
+  libremidi_identifier container_identifier;
+  libremidi_identifier device_identifier;
+  libremidi_port_handle port_handle;
+
+  const char* manufacturer;
+  const char* device_name;
+  const char* port_name;
+  const char* display_name;
+
+  enum libremidi_port_type type;
+} libremidi_port_information;
 
 typedef struct libremidi_api_configuration libremidi_api_configuration;
 
@@ -199,6 +260,10 @@ int libremidi_midi_in_port_name(
     const libremidi_midi_in_port* port, const char** name, size_t* len);
 
 LIBREMIDI_EXPORT
+int libremidi_midi_in_port_information(
+    const libremidi_midi_in_port* port, libremidi_port_information* info);
+
+LIBREMIDI_EXPORT
 int libremidi_midi_out_port_clone(
     const libremidi_midi_out_port* port, libremidi_midi_out_port** dst);
 
@@ -208,6 +273,10 @@ int libremidi_midi_out_port_free(libremidi_midi_out_port* port);
 LIBREMIDI_EXPORT
 int libremidi_midi_out_port_name(
     const libremidi_midi_out_port* port, const char** name, size_t* len);
+
+LIBREMIDI_EXPORT
+int libremidi_midi_out_port_information(
+    const libremidi_midi_out_port* port, libremidi_port_information* info);
 
 /// Observer API
 LIBREMIDI_EXPORT

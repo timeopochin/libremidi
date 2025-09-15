@@ -9,6 +9,39 @@
 #include <cstring>
 #include <limits>
 
+template <typename Variant>
+void set_id_from_variant(const Variant &var, libremidi_identifier *out)
+{
+  if (!out) return;
+
+  out->value_type = LIBREMIDI_ID_NONE;
+  out->value.string = nullptr;
+
+  std::visit([&](auto &&v) {
+    using T = std::decay_t<decltype(v)>;
+    if constexpr (std::is_same_v<T, libremidi_uuid>) {
+      out->value_type = LIBREMIDI_ID_UUID;
+      std::memcpy(out->value.uuid.bytes, v.bytes, 16);
+    }
+    else if constexpr (std::is_same_v<T, std::string>) {
+      out->value_type = LIBREMIDI_ID_STRING;
+      out->value.string = v.c_str(); // safe: string outlives this assignment
+    }
+    else if constexpr (std::is_same_v<T, const char*>) {
+      out->value_type = LIBREMIDI_ID_STRING;
+      out->value.string = v;         // just assign the pointer
+    }
+    else if constexpr (std::is_same_v<T, uint64_t>) {
+      out->value_type = LIBREMIDI_ID_UINT64;
+      out->value.u64 = v;
+    }
+    else {
+      out->value_type = LIBREMIDI_ID_NONE;
+      out->value.string = nullptr;
+    }
+  }, var);
+}
+
 struct libremidi_midi_observer_handle
 {
   libremidi::observer self;
@@ -36,6 +69,45 @@ static void assign_error_callback(const auto& src, auto& dst)
     };
   }
 }
+
+static int
+get_port_information(const libremidi::port_information* port, libremidi_port_information* info)
+{
+  if (!port || !info)
+    return -EINVAL;
+
+  std::memset(info, 0, sizeof(*info));
+
+  info->client_handle = static_cast<libremidi_client_handle>(static_cast<int64_t>(port->client));
+  info->port_handle = static_cast<libremidi_port_handle>(static_cast<int64_t>(port->port));
+
+  set_id_from_variant(port->container, &info->container_identifier);
+  set_id_from_variant(port->device, &info->device_identifier);
+
+  info->manufacturer = port->manufacturer.c_str();
+  info->device_name = port->device_name.c_str();
+  info->port_name = port->port_name.c_str();
+  info->display_name = port->display_name.c_str();
+
+  static const std::unordered_map<libremidi::port_information::port_type, libremidi_port_type>
+      port_type_map
+      = {{libremidi::port_information::software, PORT_SOFTWARE},
+         {libremidi::port_information::loopback, PORT_LOOPBACK},
+         {libremidi::port_information::hardware, PORT_HARDWARE},
+         {libremidi::port_information::usb, PORT_USB},
+         {libremidi::port_information::bluetooth, PORT_BLUETOOTH},
+         {libremidi::port_information::pci, PORT_PCI},
+         {libremidi::port_information::network, PORT_NETWORK}};
+
+  auto it = port_type_map.find(port->type);
+  if (it != port_type_map.end())
+    info->type = it->second;
+  else
+    info->type = PORT_UNKNOWN;
+
+  return 0;
+}
+
 }
 
 extern "C" {
@@ -123,6 +195,13 @@ int libremidi_midi_in_port_name(const libremidi_midi_in_port* port, const char**
   return 0;
 }
 
+int libremidi_midi_in_port_information(
+    const libremidi_midi_in_port* port, libremidi_port_information* info)
+{
+  auto p = reinterpret_cast<const libremidi::port_information*>(port);
+  return libremidi::get_port_information(p, info);
+}
+
 int libremidi_midi_out_port_clone(
     const libremidi_midi_out_port* port, libremidi_midi_out_port** dst)
 {
@@ -150,6 +229,13 @@ int libremidi_midi_out_port_name(
   *name = p.port_name.data();
   *len = p.port_name.size();
   return 0;
+}
+
+int libremidi_midi_out_port_information(
+    const libremidi_midi_out_port* port, libremidi_port_information* info)
+{
+  auto p = reinterpret_cast<const libremidi::port_information*>(port);
+  return libremidi::get_port_information(p, info);
 }
 
 int libremidi_midi_observer_new(

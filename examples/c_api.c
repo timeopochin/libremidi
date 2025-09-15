@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #if defined(_WIN32)
   #include <Windows.h>
@@ -27,16 +28,58 @@ typedef struct enumerated_ports
   int out_port_count;
 } enumerated_ports;
 
+static const char* safe_str(const char* s) { return s ? s : "(null)"; }
+
+static void print_identifier(const char* label, const libremidi_identifier* id)
+{
+  switch (id->value_type) {
+  case LIBREMIDI_ID_NONE:
+    printf("  %s: (none)\n", label);
+    break;
+
+  case LIBREMIDI_ID_UUID:
+    printf("  %s (uuid): ", label);
+    for (int i = 0; i < 16; ++i)
+      printf("%02x", (unsigned)id->value.uuid.bytes[i]);
+    printf("\n");
+    break;
+
+  case LIBREMIDI_ID_STRING:
+    printf("  %s: %s\n", label, safe_str(id->value.string));
+    break;
+
+  case LIBREMIDI_ID_UINT64:
+    printf("  %s: %" PRIu64 "\n", label, (uint64_t)id->value.u64);
+    break;
+
+  default:
+    printf("  %s: (unknown type %u)\n", label, (unsigned)id->value_type);
+    break;
+  }
+}
+
+static void print_port_info(const libremidi_port_information* info) {
+  print_identifier("container_identification", &info->container_identifier);
+  print_identifier("device_identification", &info->device_identifier);
+
+  printf("  client_handle: %" PRId64 "\n", (int64_t)info->client_handle);
+  printf("  port_handle:   %" PRId64 "\n", (int64_t)info->port_handle);
+  printf("  manufacturer:  %s\n", safe_str(info->manufacturer));
+  printf("  device_name:   %s\n", safe_str(info->device_name));
+  printf("  port_name:     %s\n", safe_str(info->port_name));
+  printf("  display_name:  %s\n", safe_str(info->display_name));
+
+  printf("  port type bits: 0x%02x\n", (unsigned)info->type);
+}
+
 void on_input_port_found(void* ctx, const libremidi_midi_in_port* port)
 {
-  const char* name = NULL;
-  size_t len = 0;
-
-  int ret = libremidi_midi_in_port_name(port, &name, &len);
-  if (ret != 0)
+  libremidi_port_information info = {0};
+  if (libremidi_midi_in_port_information(port, &info) != 0)
     return;
 
-  printf("input: %s\n", name);
+  printf("input: %s\n", safe_str(info.port_name));
+  print_port_info(&info);
   fflush(stdout);
 
   enumerated_ports* e = (enumerated_ports*)ctx;
@@ -46,14 +89,12 @@ void on_input_port_found(void* ctx, const libremidi_midi_in_port* port)
 
 void on_output_port_found(void* ctx, const libremidi_midi_out_port* port)
 {
-  const char* name = NULL;
-  size_t len = 0;
-
-  int ret = libremidi_midi_out_port_name(port, &name, &len);
-  if (ret != 0)
+  libremidi_port_information info = {0};
+  if (libremidi_midi_out_port_information(port, &info) != 0)
     return;
 
-  printf("output: %s\n", name);
+  printf("output: %s\n", safe_str(info.port_name));
+  print_port_info(&info);
   fflush(stdout);
 
   enumerated_ports* e = (enumerated_ports*)ctx;
