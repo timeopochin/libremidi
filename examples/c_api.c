@@ -67,7 +67,7 @@ static void print_port_info(const libremidi_port_information *info) {
   printf("  port_name:     %s\n", safe_str(info->port_name));
   printf("  display_name:  %s\n", safe_str(info->display_name));
 
-  printf("  port type bits: 0x%02x\n", (unsigned)info->type);
+  printf("  port type: %d\n", (uint8_t)info->type);
 }
 
 void on_input_port_found(void *ctx, const libremidi_midi_in_port *port) {
