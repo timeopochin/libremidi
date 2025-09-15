@@ -1,18 +1,17 @@
 #include <libremidi/libremidi-c.h>
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
 
 #if defined(_WIN32)
-  #include <Windows.h>
+#include <Windows.h>
 #else
-  #include <unistd.h>
+#include <unistd.h>
 #endif
 
-void sleep_ms(int milliseconds)
-{
+void sleep_ms(int milliseconds) {
 #if defined(_WIN32)
   Sleep(milliseconds);
 #else
@@ -20,18 +19,17 @@ void sleep_ms(int milliseconds)
 #endif
 }
 
-typedef struct enumerated_ports
-{
-  libremidi_midi_in_port* in_ports[256];
-  libremidi_midi_out_port* out_ports[256];
+typedef struct enumerated_ports {
+  libremidi_midi_in_port *in_ports[256];
+  libremidi_midi_out_port *out_ports[256];
   int in_port_count;
   int out_port_count;
 } enumerated_ports;
 
-static const char* safe_str(const char* s) { return s ? s : "(null)"; }
+static const char *safe_str(const char *s) { return s ? s : "(null)"; }
 
-static void print_identifier(const char* label, const libremidi_identifier* id)
-{
+static void print_identifier(const char *label,
+                             const libremidi_identifier *id) {
   switch (id->value_type) {
   case LIBREMIDI_ID_NONE:
     printf("  %s: (none)\n", label);
@@ -58,7 +56,7 @@ static void print_identifier(const char* label, const libremidi_identifier* id)
   }
 }
 
-static void print_port_info(const libremidi_port_information* info) {
+static void print_port_info(const libremidi_port_information *info) {
   print_identifier("container_identification", &info->container_identifier);
   print_identifier("device_identification", &info->device_identifier);
 
@@ -72,8 +70,7 @@ static void print_port_info(const libremidi_port_information* info) {
   printf("  port type bits: 0x%02x\n", (unsigned)info->type);
 }
 
-void on_input_port_found(void* ctx, const libremidi_midi_in_port* port)
-{
+void on_input_port_found(void *ctx, const libremidi_midi_in_port *port) {
   libremidi_port_information info = {0};
   if (libremidi_midi_in_port_information(port, &info) != 0)
     return;
@@ -82,13 +79,12 @@ void on_input_port_found(void* ctx, const libremidi_midi_in_port* port)
   print_port_info(&info);
   fflush(stdout);
 
-  enumerated_ports* e = (enumerated_ports*)ctx;
+  enumerated_ports *e = (enumerated_ports *)ctx;
   libremidi_midi_in_port_clone(port, &e->in_ports[e->in_port_count]);
   e->in_port_count++;
 }
 
-void on_output_port_found(void* ctx, const libremidi_midi_out_port* port)
-{
+void on_output_port_found(void *ctx, const libremidi_midi_out_port *port) {
   libremidi_port_information info = {0};
   if (libremidi_midi_out_port_information(port, &info) != 0)
     return;
@@ -97,42 +93,41 @@ void on_output_port_found(void* ctx, const libremidi_midi_out_port* port)
   print_port_info(&info);
   fflush(stdout);
 
-  enumerated_ports* e = (enumerated_ports*)ctx;
+  enumerated_ports *e = (enumerated_ports *)ctx;
   libremidi_midi_out_port_clone(port, &e->out_ports[e->out_port_count]);
   e->out_port_count++;
 }
 
-void on_midi1_message(
-    void* ctx, libremidi_timestamp ts, const libremidi_midi1_symbol* msg, size_t len)
-{
+void on_midi1_message(void *ctx, libremidi_timestamp ts,
+                      const libremidi_midi1_symbol *msg, size_t len) {
   printf("%#02x %#02x %#02x \n", (int)msg[0], (int)msg[1], (int)msg[2]);
   fflush(stdout);
 }
 
-void on_midi2_message(
-    void* ctx, libremidi_timestamp ts, const libremidi_midi2_symbol* msg, size_t len)
-{
+void on_midi2_message(void *ctx, libremidi_timestamp ts,
+                      const libremidi_midi2_symbol *msg, size_t len) {
   printf("%#02x %#02x %#02x\n", (int)msg[0], (int)msg[1], (int)msg[2]);
   fflush(stdout);
 }
 
-int enumerate_ports(libremidi_midi_observer_handle* observer, struct enumerated_ports* e)
-{
+int enumerate_ports(libremidi_midi_observer_handle *observer,
+                    struct enumerated_ports *e) {
   int ret = 0;
 
-  ret = libremidi_midi_observer_enumerate_input_ports(observer, e, on_input_port_found);
+  ret = libremidi_midi_observer_enumerate_input_ports(observer, e,
+                                                      on_input_port_found);
   if (ret != 0)
     return ret;
 
-  ret = libremidi_midi_observer_enumerate_output_ports(observer, e, on_output_port_found);
+  ret = libremidi_midi_observer_enumerate_output_ports(observer, e,
+                                                       on_output_port_found);
   if (ret != 0)
     return ret;
 
   return 0;
 }
 
-int main(void)
-{
+int main(void) {
   int ret = 0;
 
   /// Create an observer for MIDI ports
@@ -160,15 +155,15 @@ int main(void)
   observer_api_conf.configuration_type = Observer;
   observer_api_conf.api = ALSA_SEQ;
 
-  libremidi_midi_observer_handle* observer = NULL;
-  ret = libremidi_midi_observer_new(&observer_conf, &observer_api_conf, &observer);
+  libremidi_midi_observer_handle *observer = NULL;
+  ret = libremidi_midi_observer_new(&observer_conf, &observer_api_conf,
+                                    &observer);
   if (ret != 0)
     return ret;
 
   ret = enumerate_ports(observer, &e);
 
-  if (ret != 0)
-  {
+  if (ret != 0) {
     libremidi_midi_observer_free(observer);
     return ret;
   }
@@ -191,7 +186,7 @@ int main(void)
   midi_in_api_conf.configuration_type = Input;
   midi_in_api_conf.api = ALSA_SEQ;
 
-  libremidi_midi_in_handle* midi_in = NULL;
+  libremidi_midi_in_handle *midi_in = NULL;
   ret = libremidi_midi_in_new(&midi_in_conf, &midi_in_api_conf, &midi_in);
   if (ret != 0)
     goto free_observer;
@@ -214,7 +209,7 @@ int main(void)
   midi_out_api_conf.configuration_type = Output;
   midi_out_api_conf.api = ALSA_SEQ;
 
-  libremidi_midi_out_handle* midi_out = NULL;
+  libremidi_midi_out_handle *midi_out = NULL;
   ret = libremidi_midi_out_new(&midi_out_conf, &midi_out_api_conf, &midi_out);
   if (ret != 0)
     goto free_midi_in;

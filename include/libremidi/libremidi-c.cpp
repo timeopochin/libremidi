@@ -10,32 +10,38 @@
 #include <limits>
 
 template <typename Variant>
-void set_id_from_variant(const Variant &var, libremidi_identifier *out)
+void set_id_from_variant(const Variant& var, libremidi_identifier* out)
 {
-  if (!out) return;
+  if (!out)
+    return;
 
   out->value_type = LIBREMIDI_ID_NONE;
   out->value.string = nullptr;
 
-  std::visit([&](auto &&v) {
+  std::visit([&](auto&& v) {
     using T = std::decay_t<decltype(v)>;
-    if constexpr (std::is_same_v<T, libremidi_uuid>) {
+    if constexpr (std::is_same_v<T, libremidi_uuid>)
+    {
       out->value_type = LIBREMIDI_ID_UUID;
       std::memcpy(out->value.uuid.bytes, v.bytes, 16);
     }
-    else if constexpr (std::is_same_v<T, std::string>) {
+    else if constexpr (std::is_same_v<T, std::string>)
+    {
       out->value_type = LIBREMIDI_ID_STRING;
       out->value.string = v.c_str(); // safe: string outlives this assignment
     }
-    else if constexpr (std::is_same_v<T, const char*>) {
+    else if constexpr (std::is_same_v<T, const char*>)
+    {
       out->value_type = LIBREMIDI_ID_STRING;
-      out->value.string = v;         // just assign the pointer
+      out->value.string = v; // just assign the pointer
     }
-    else if constexpr (std::is_same_v<T, uint64_t>) {
+    else if constexpr (std::is_same_v<T, uint64_t>)
+    {
       out->value_type = LIBREMIDI_ID_UINT64;
       out->value.u64 = v;
     }
-    else {
+    else
+    {
       out->value_type = LIBREMIDI_ID_NONE;
       out->value.string = nullptr;
     }
@@ -366,7 +372,8 @@ int libremidi_midi_in_new(
         conf.on_message = [cb = c->on_midi1_message](const libremidi::message& msg) {
           cb.callback(cb.context, msg.timestamp, msg.bytes.data(), msg.size());
         };
-      else if (c->version == libremidi_midi_configuration::MIDI1_RAW && c->on_midi1_raw_data.callback)
+      else if (
+          c->version == libremidi_midi_configuration::MIDI1_RAW && c->on_midi1_raw_data.callback)
       {
         conf.on_raw_data = [cb = c->on_midi1_raw_data](std::span<const uint8_t> msg, int64_t ts) {
           cb.callback(cb.context, ts, msg.data(), msg.size());
@@ -409,7 +416,8 @@ int libremidi_midi_in_new(
         conf.on_message = [cb = c->on_midi2_message](const libremidi::ump& msg) {
           cb.callback(cb.context, msg.timestamp, msg.data, msg.size());
         };
-      else if (c->version == libremidi_midi_configuration::MIDI2_RAW && c->on_midi2_raw_data.callback)
+      else if (
+          c->version == libremidi_midi_configuration::MIDI2_RAW && c->on_midi2_raw_data.callback)
       {
         conf.on_raw_data = [cb = c->on_midi2_raw_data](std::span<const uint32_t> msg, int64_t ts) {
           cb.callback(cb.context, ts, msg.data(), msg.size());
@@ -556,7 +564,8 @@ int libremidi_midi_out_send_message(
   return res != stdx::error{} ? -EIO : 0;
 }
 
-int libremidi_midi_out_send_ump(libremidi_midi_out_handle* out, const libremidi_midi2_symbol* msg, size_t sz)
+int libremidi_midi_out_send_ump(
+    libremidi_midi_out_handle* out, const libremidi_midi2_symbol* msg, size_t sz)
 {
   if (!out || !msg || sz > std::numeric_limits<int32_t>::max())
     return -EINVAL;
