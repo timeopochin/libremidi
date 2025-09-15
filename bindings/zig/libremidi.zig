@@ -6,7 +6,6 @@ fn errnoFromInt(rc: anytype) E {
     return @enumFromInt(-rc);
 }
 
-
 extern fn libremidi_get_version() [*:0]const u8;
 pub const getVersion = libremidi_get_version;
 
@@ -35,7 +34,6 @@ pub const Api = enum(c.libremidi_api) {
 
     dummy = c.DUMMY,
 
-
     extern fn libremidi_api_identifier(self: Api) [*:0]const u8;
     pub const getId = libremidi_api_identifier;
 
@@ -46,7 +44,6 @@ pub const Api = enum(c.libremidi_api) {
     pub const getById = libremidi_get_compiled_api_by_identifier;
 
     pub const Config = extern struct {
-
         api: Api = .unspecified,
 
         conf_type: enum(@FieldType(c.libremidi_api_configuration, "configuration_type")) {
@@ -59,13 +56,12 @@ pub const Api = enum(c.libremidi_api) {
     };
 
     fn Callback(comptime P: type) type {
-        return (?*const fn(ctx: P, api: Api) callconv(.C) void);
+        return (?*const fn (ctx: P, api: Api) callconv(.C) void);
     }
 };
 
 pub const Timestamp = extern struct {
-    inner:  c.libremidi_timestamp = 0,
-
+    inner: c.libremidi_timestamp = 0,
 
     pub const Mode = enum(c.enum_libremidi_timestamp_mode) {
         no_timestamp = c.NoTimestamp,
@@ -80,9 +76,66 @@ pub const Timestamp = extern struct {
     fn Callback(comptime P: type) type {
         return extern struct {
             context: P = null,
-            callback: (?*const fn(ctx: P, ts: Timestamp) callconv(.C) Timestamp) = null,
+            callback: (?*const fn (ctx: P, ts: Timestamp) callconv(.C) Timestamp) = null,
         };
     }
+};
+
+pub const PortInformation = extern struct {
+    pub const Type = enum(u8) {
+        unknown = c.PORT_UNKNOWN,
+        software = c.PORT_SOFTWARE,
+        loopback = c.PORT_LOOPBACK,
+        hardware = c.PORT_HARDWARE,
+        usb = c.PORT_USB,
+        bluetooth = c.PORT_BLUETOOTH,
+        pci = c.PORT_PCI,
+        network = c.PORT_NETWORK,
+    };
+
+    pub const Identifier = extern struct {
+        const Type = enum(u8) {
+            none = c.LIBREMIDI_ID_NONE,
+            uuid = c.LIBREMIDI_ID_UUID,
+            string = c.LIBREMIDI_ID_STRING,
+            uint64 = c.LIBREMIDI_ID_UINT64,
+        };
+
+        value_type: Identifier.Type,
+        value: extern union {
+            uuid: [16]u8,
+            string: [*:0]const u8,
+            u64: u64,
+        },
+
+        pub const Tagged = union(Identifier.Type) {
+            none: void,
+            uuid: [16]u8,
+            string: []const u8,
+            uint64: u64,
+        };
+
+        pub fn asTagged(self: Identifier) Tagged {
+            return switch (self.value_type) {
+                .none => .{ .none = {} },
+                .uuid => .{ .uuid = self.value.uuid },
+                .string => .{ .string = std.mem.span(self.value.string) },
+                .uint64 => .{ .uint64 = self.value.u64 },
+            };
+        }
+    };
+
+    client_handle: u64,
+    container_identifier: Identifier,
+    device_identifier: Identifier,
+    port_handle: u64,
+
+    manufacturer: [*:0]const u8,
+    device_name: [*:0]const u8,
+    port_name: [*:0]const u8,
+    display_name: [*:0]const u8,
+
+    type: Type,
 };
 
 pub const Observer = opaque {
@@ -90,7 +143,6 @@ pub const Observer = opaque {
 
     extern fn libremidi_midi_observer_new(conf: ?*const Config, api: ?*const Api.Config, out: *?*Observer) c_int;
     pub fn init(conf: ?*const Config, api: ?*const Api.Config) !*Observer {
-
         var handle: ?*Observer = undefined;
         switch (errnoFromInt(libremidi_midi_observer_new(conf, api, &handle))) {
             .SUCCESS => return handle.?,
@@ -127,7 +179,6 @@ pub const Observer = opaque {
     }
 
     pub const Config = extern struct {
-
         on_error: ErrCallback(Ctx) = .{ .context = null, .callback = null },
         on_warning: ErrCallback(Ctx) = .{ .context = null, .callback = null },
         input_added: InputCallback(Ctx) = .{ .context = null, .callback = null },
@@ -139,13 +190,12 @@ pub const Observer = opaque {
         track_any: bool = false,
         notify_in_constructor: bool = false,
 
-
         fn ErrCallback(comptime P: type) type {
             return extern struct {
                 const Loc = ?*const anyopaque;
 
                 context: P = null,
-                callback: (?*const fn(ctx: P, err: [*:0]const u8, err_len: usize, source_location: Loc) callconv(.C) void) = null,
+                callback: (?*const fn (ctx: P, err: [*:0]const u8, err_len: usize, source_location: Loc) callconv(.C) void) = null,
             };
         }
 
@@ -166,15 +216,16 @@ pub const Observer = opaque {
 };
 
 pub const midi = struct {
-
     pub const Config = extern struct {
         const Ctx = ?*anyopaque;
 
         version: enum(@FieldType(c.libremidi_midi_configuration, "version")) {
             none = 0,
 
-            midi1 = c.MIDI1, midi1_raw = c.MIDI1_RAW,
-            midi2 = c.MIDI2, midi2_raw = c.MIDI2_RAW,
+            midi1 = c.MIDI1,
+            midi1_raw = c.MIDI1_RAW,
+            midi2 = c.MIDI2,
+            midi2_raw = c.MIDI2_RAW,
         } = .none,
 
         port: extern union {
@@ -199,22 +250,19 @@ pub const midi = struct {
         ignore_sensing: bool = false,
         timestamps: Timestamp.Mode = .no_timestamp,
 
-
         fn ErrCallback(comptime P: type) type {
             return extern struct {
                 const Loc = ?*const anyopaque;
 
                 context: P = null,
-                callback: (?*const fn(ctx: P, err: [*:0]const u8, err_len: usize, source_location: Loc) callconv(.C) void) = null,
+                callback: (?*const fn (ctx: P, err: [*:0]const u8, err_len: usize, source_location: Loc) callconv(.C) void) = null,
             };
         }
     };
 
     pub const In = opaque {
-
         extern fn libremidi_midi_in_new(conf: ?*const Config, api: ?*const Api.Config, out: *?*In) c_int;
         pub fn init(conf: ?*const Config, api: ?*const Api.Config) !*In {
-
             var handle: ?*In = undefined;
             switch (errnoFromInt(libremidi_midi_in_new(conf, api, &handle))) {
                 .SUCCESS => return handle.?,
@@ -250,12 +298,9 @@ pub const midi = struct {
             }
         }
 
-
         pub const Port = opaque {
-
             extern fn libremidi_midi_in_port_clone(self: *Port, dest: *?*Port) c_int;
             pub fn clone(self: *Port) !*Port {
-
                 var handle: ?*Port = undefined;
                 switch (errnoFromInt(libremidi_midi_in_port_clone(self, &handle))) {
                     .SUCCESS => return handle.?,
@@ -274,7 +319,6 @@ pub const midi = struct {
 
             extern fn libremidi_midi_in_port_name(self: *Port, name: *[*:0]const u8, len: *usize) c_int;
             pub fn getName(self: *Port) ![:0]const u8 {
-
                 var name: [:0]const u8 = undefined;
                 switch (errnoFromInt(libremidi_midi_in_port_name(self, &name.ptr, &name.len))) {
                     .SUCCESS => return name,
@@ -283,17 +327,25 @@ pub const midi = struct {
                 }
             }
 
+            extern fn libremidi_midi_in_port_information(self: *Port, info: *PortInformation) c_int;
+            pub fn getInformation(self: *Port) !PortInformation {
+                var info: PortInformation = undefined;
+                switch (errnoFromInt(libremidi_midi_in_port_information(self, &info))) {
+                    .SUCCESS => return info,
+                    .INVAL => return error.InvalidArgument,
+                    else => unreachable,
+                }
+            }
+
             fn Callback(comptime P: type) type {
-                return (?*const fn(ctx: P, port: *Port) callconv(.C) void);
+                return (?*const fn (ctx: P, port: *Port) callconv(.C) void);
             }
         };
     };
 
     pub const Out = opaque {
-
         extern fn libremidi_midi_out_new(conf: ?*const Config, api: ?*const Api.Config, out: *?*Out) c_int;
         pub fn init(conf: ?*const Config, api: ?*const Api.Config) !*Out {
-
             var handle: ?*Out = undefined;
             switch (errnoFromInt(libremidi_midi_out_new(conf, api, &handle))) {
                 .SUCCESS => return handle.?,
@@ -362,10 +414,8 @@ pub const midi = struct {
         }
 
         pub const Port = opaque {
-
             extern fn libremidi_midi_out_port_clone(self: *Port, dest: *?*Port) c_int;
             pub fn clone(self: *Port) !*Port {
-
                 var handle: ?*Port = undefined;
                 switch (errnoFromInt(libremidi_midi_out_port_clone(self, &handle))) {
                     .SUCCESS => return handle.?,
@@ -384,7 +434,6 @@ pub const midi = struct {
 
             extern fn libremidi_midi_out_port_name(self: *Port, name: *[*:0]const u8, len: *usize) c_int;
             pub fn getName(self: *Port) ![:0]const u8 {
-
                 var name: [:0]const u8 = undefined;
                 switch (errnoFromInt(libremidi_midi_out_port_name(self, &name.ptr, &name.len))) {
                     .SUCCESS => return name,
@@ -393,8 +442,18 @@ pub const midi = struct {
                 }
             }
 
+            extern fn libremidi_midi_out_port_information(self: *Port, info: *PortInformation) c_int;
+            pub fn getInformation(self: *Port) !PortInformation {
+                var info: PortInformation = undefined;
+                switch (errnoFromInt(libremidi_midi_out_port_information(self, &info))) {
+                    .SUCCESS => return info,
+                    .INVAL => return error.InvalidArgument,
+                    else => unreachable,
+                }
+            }
+
             fn Callback(comptime P: type) type {
-                return (?*const fn(ctx: P, port: *Port) callconv(.C) void);
+                return (?*const fn (ctx: P, port: *Port) callconv(.C) void);
             }
         };
     };
@@ -411,7 +470,7 @@ pub const midi = struct {
         fn Callback(comptime P: type) type {
             return extern struct {
                 context: P = null,
-                callback: (?*const fn(ctx: P, ts: Timestamp, msg: Message, len: usize) callconv(.C) void) = null,
+                callback: (?*const fn (ctx: P, ts: Timestamp, msg: Message, len: usize) callconv(.C) void) = null,
             };
         }
     };
@@ -428,7 +487,7 @@ pub const midi = struct {
         fn Callback(comptime P: type) type {
             return extern struct {
                 context: P,
-                callback: (?*const fn(ctx: P, ts: Timestamp, msg: Message, len: usize) callconv(.C) void),
+                callback: (?*const fn (ctx: P, ts: Timestamp, msg: Message, len: usize) callconv(.C) void),
             };
         }
     };
