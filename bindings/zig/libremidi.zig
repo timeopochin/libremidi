@@ -123,6 +123,20 @@ pub const PortInformation = extern struct {
                 .uint64 => .{ .uint64 = self.value.u64 },
             };
         }
+
+        pub fn eql(a: Identifier, b: Identifier) bool {
+            const at = a.asTagged();
+            const bt = b.asTagged();
+
+            if (@as(Identifier.Type, at) != @as(Identifier.Type, bt)) return false;
+
+            return switch (at) {
+                .none => true,
+                .uuid => std.mem.eql(u8, &at.uuid, &bt.uuid),
+                .string => std.mem.eql(u8, at.string, bt.string),
+                .uint64 => at.uint64 == bt.uint64,
+            };
+        }
     };
 
     client_handle: u64,
